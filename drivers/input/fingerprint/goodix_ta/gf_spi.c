@@ -735,6 +735,18 @@ static const struct file_operations gf_fops = {
 #endif
 };
 
+static void set_fingerprintd_nice(int nice)
+{
+	struct task_struct *p;
+
+	read_lock(&tasklist_lock);
+	for_each_process(p) {
+		if (strstr(p->comm, "fingerprint") || strstr(p->comm, "inscreen")) {
+			set_user_nice(p, nice);
+		}
+	}
+	read_unlock(&tasklist_lock);
+}
 
 #ifndef GOODIX_DRM_INTERFACE_WA
 static int goodix_fb_state_chg_callback(struct notifier_block *nb,
@@ -759,6 +771,7 @@ static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 		switch (blank) {
 			case DRM_BLANK_POWERDOWN:
 				if (gf_dev->device_available == 1) {
+					set_fingerprintd_nice(MIN_NICE);
 					gf_dev->fb_black = 1;
 					gf_dev->wait_finger_down = true;
 #if defined(GF_NETLINK_ENABLE)
@@ -777,6 +790,7 @@ static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 
 			case DRM_BLANK_UNBLANK:
 				if (gf_dev->device_available == 1) {
+					set_fingerprintd_nice(0);
 					gf_dev->fb_black = 0;
 #if defined(GF_NETLINK_ENABLE)
 					temp[0] = GF_NET_EVENT_FB_UNBLACK;
