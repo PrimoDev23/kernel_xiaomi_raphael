@@ -143,12 +143,14 @@ static struct static_key_true *cgroup_subsys_on_dfl_key[] = {
 };
 #undef SUBSYS
 
+static DEFINE_PER_CPU(struct cgroup_cpu_stat, cgrp_dfl_root_cpu_stat);
+
 /*
  * The default hierarchy, reserved for the subsystems that are otherwise
  * unattached - it never has more than a single cgroup, and all tasks are
  * part of that cgroup.
  */
-struct cgroup_root cgrp_dfl_root;
+struct cgroup_root cgrp_dfl_root = { .cgrp.cpu_stat = &cgrp_dfl_root_cpu_stat };
 EXPORT_SYMBOL_GPL(cgrp_dfl_root);
 
 /*
@@ -3335,6 +3337,8 @@ static int cgroup_stat_show(struct seq_file *seq, void *v)
 	seq_printf(seq, "nr_dying_descendants %d\n",
 		   cgroup->nr_dying_descendants);
 
+	cgroup_stat_show_cputime(seq, "cpu.");
+
 	return 0;
 }
 
@@ -4653,8 +4657,10 @@ static void css_free_work_fn(struct work_struct *work)
 			 */
 			cgroup_put(cgroup_parent(cgrp));
 			kernfs_put(cgrp->kn);
-			if (cgroup_on_dfl(cgrp))
+			if (cgroup_on_dfl(cgrp)) {
 				psi_cgroup_free(cgrp);
+				cgroup_stat_exit(cgrp);
+			}
 			kfree(cgrp);
 		} else {
 			/*
@@ -4700,6 +4706,10 @@ static void css_release_work_fn(struct work_struct *work)
 		trace_cgroup_release(cgrp);
 
 		spin_lock_irq(&css_set_lock);
+
+		if (cgroup_on_dfl(cgrp))
+			cgroup_stat_flush(cgrp);
+
 		for (tcgrp = cgroup_parent(cgrp); tcgrp;
 		     tcgrp = cgroup_parent(tcgrp))
 			tcgrp->nr_dying_descendants--;
@@ -4884,6 +4894,12 @@ static struct cgroup *cgroup_create(struct cgroup *parent)
 	if (ret)
 		goto out_free_cgrp;
 
+	if (cgroup_on_dfl(parent)) {
+		ret = cgroup_stat_init(cgrp);
+		if (ret)
+			goto out_cancel_ref;
+	}
+
 	/*
 	 * Temporarily set the pointer to NULL, so idr_find() won't return
 	 * a half-baked cgroup.
@@ -4891,7 +4907,7 @@ static struct cgroup *cgroup_create(struct cgroup *parent)
 	cgrp->id = cgroup_idr_alloc(&root->cgroup_idr, NULL, 2, 0, GFP_KERNEL);
 	if (cgrp->id < 0) {
 		ret = -ENOMEM;
-		goto out_cancel_ref;
+		goto out_stat_exit;
 	}
 
 	init_cgroup_housekeeping(cgrp);
@@ -4950,6 +4966,9 @@ static struct cgroup *cgroup_create(struct cgroup *parent)
 
 out_idr_free:
 	cgroup_idr_remove(&root->cgroup_idr, cgrp->id);
+out_stat_exit:
+	if (cgroup_on_dfl(parent))
+		cgroup_stat_exit(cgrp);
 out_cancel_ref:
 	percpu_ref_exit(&cgrp->self.refcnt);
 out_free_cgrp:
@@ -5345,6 +5364,8 @@ int __init cgroup_init(void)
 	BUG_ON(percpu_init_rwsem(&cgroup_threadgroup_rwsem));
 	BUG_ON(cgroup_init_cftypes(NULL, cgroup_base_files));
 	BUG_ON(cgroup_init_cftypes(NULL, cgroup1_base_files));
+
+	cgroup_stat_boot();
 
 	/*
 	 * The latency of the synchronize_sched() is too high for cgroups,
