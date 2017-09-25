@@ -1177,7 +1177,7 @@ static void update_curr_dl(struct rq *rq)
 	account_group_exec_runtime(curr, delta_exec);
 
 	curr->se.exec_start = rq_clock_task(rq);
-	cpuacct_charge(curr, delta_exec);
+	cgroup_account_cputime(curr, delta_exec);
 
 	if (dl_entity_is_special(dl_se))
 		return;
