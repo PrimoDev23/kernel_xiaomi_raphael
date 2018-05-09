@@ -55,6 +55,7 @@ configure specific aspects of kernel behavior to your liking.
    :maxdepth: 1
 
    initrd
+   cgroup-v2
    serial-console
    braille-console
    parport
