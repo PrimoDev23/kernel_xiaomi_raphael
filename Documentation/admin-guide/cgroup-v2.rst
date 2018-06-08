@@ -1198,6 +1198,22 @@ PAGE_SIZE multiple when read back.
 	Shows pressure stall information for memory. See
 	Documentation/accounting/psi.txt for details.
 
+  memory.swap.events
+	A read-only flat-keyed file which exists on non-root cgroups.
+	The following entries are defined.  Unless specified
+	otherwise, a value change in this file generates a file
+	modified event.
+
+	  max
+		The number of times the cgroup's swap usage was about
+		to go over the max boundary and swap allocation
+		failed.
+
+	  fail
+		The number of times swap allocation failed either
+		because of running out of swap system-wide or max
+		limit.
+
 
 Usage Guidelines
 ~~~~~~~~~~~~~~~~
