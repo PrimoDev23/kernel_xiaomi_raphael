@@ -3563,6 +3563,15 @@ int update_rt_rq_load_avg(u64 now, int cpu, struct rt_rq *rt_rq, int running)
 	return ret;
 }
 
+int update_dl_rq_load_avg(u64 now, struct rq *rq, int running)
+{
+	int ret;
+
+	ret = ___update_load_avg(now, rq->cpu, &rq->avg_dl, running, running, NULL, &rq->rt);
+
+	return ret;
+}
+
 /*
  * Optional action to be done while updating the load average
  */
@@ -9547,9 +9556,12 @@ static void attach_tasks(struct lb_env *env)
 	rq_unlock(env->dst_rq, &rf);
 }
 
-static inline bool rt_rq_has_blocked(struct rq *rq)
+static inline bool others_rqs_have_blocked(struct rq *rq)
 {
 	if (READ_ONCE(rq->avg_rt.util_avg))
+		return true;
+
+	if (READ_ONCE(rq->avg_dl.util_avg))
 		return true;
 
 	return false;
@@ -9610,6 +9622,7 @@ static void update_blocked_averages(int cpu)
 			list_del_leaf_cfs_rq(cfs_rq);
 	}
 	update_rt_rq_load_avg(rq_clock_task(rq), cpu, &rq->rt, 0);
+	update_dl_rq_load_avg(rq_clock_task(rq), rq, 0);
 #ifdef CONFIG_NO_HZ_COMMON
 	rq->last_blocked_load_update_tick = jiffies;
 #endif
@@ -9673,6 +9686,7 @@ static inline void update_blocked_averages(int cpu)
 	update_rq_clock(rq);
 	update_cfs_rq_load_avg(cfs_rq_clock_task(cfs_rq), cfs_rq, true);
 	update_rt_rq_load_avg(rq_clock_task(rq), cpu, &rq->rt, 0);
+	update_dl_rq_load_avg(rq_clock_task(rq), rq, 0);
 #ifdef CONFIG_NO_HZ_COMMON
 	rq->last_blocked_load_update_tick = jiffies;
 #endif
