@@ -2069,6 +2069,7 @@ build_sched_domains(const struct cpumask *cpu_map, struct sched_domain_attr *att
 	struct s_data d;
 	int i, ret = -ENOMEM;
 	struct sched_domain_topology_level *tl_asym;
+	bool has_asym = false;
 
 	if (WARN_ON(cpumask_empty(cpu_map)))
 		goto error;
@@ -2087,8 +2088,10 @@ build_sched_domains(const struct cpumask *cpu_map, struct sched_domain_attr *att
 		for_each_sd_topology(tl) {
 			int dflags = 0;
 
-			if (tl == tl_asym)
+			if (tl == tl_asym) {
 				dflags |= SD_ASYM_CPUCAPACITY;
+				has_asym = true;
+			}
 
 			sd = build_sched_domain(tl, cpu_map, attr, sd, dflags, i);
 
@@ -2172,6 +2175,9 @@ build_sched_domains(const struct cpumask *cpu_map, struct sched_domain_attr *att
 	}
 
 	rcu_read_unlock();
+
+	if (has_asym)
+		static_branch_enable_cpuslocked(&sched_asym_cpucapacity);
 
 	if (!cpumask_empty(cpu_map))
 		update_asym_cpucapacity(cpumask_first(cpu_map));
