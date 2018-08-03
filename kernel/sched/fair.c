@@ -3465,9 +3465,6 @@ u64 cfs_rq_clock_pelt(struct cfs_rq *cfs_rq)
 static int
 __update_load_avg_blocked_se(u64 now, struct sched_entity *se)
 {
-	if (entity_is_task(se))
-		se->runnable_weight = se->load.weight;
-
 	if (___update_load_sum(now, &se->avg, 0, 0, 0)) {
 		___update_load_avg(&se->avg, se_weight(se), se_runnable(se), NULL);
 		return 1;
@@ -3479,9 +3476,6 @@ __update_load_avg_blocked_se(u64 now, struct sched_entity *se)
 static int
 __update_load_avg_se(u64 now, struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
-	if (entity_is_task(se))
-		se->runnable_weight = se->load.weight;
-
 	if (___update_load_sum(now, &se->avg, !!se->on_rq, !!se->on_rq,
 				cfs_rq->curr == se)) {
 
