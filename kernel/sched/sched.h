@@ -940,7 +940,10 @@ struct rq {
 
 	unsigned int clock_update_flags;
 	u64 clock;
-	u64 clock_task;
+	/* Ensure that all clocks are in the same cache line */
+	u64			clock_task ____cacheline_aligned;
+	u64			clock_pelt;
+	unsigned long		lost_idle_time;
 
 	atomic_t nr_iowait;
 
@@ -1876,6 +1879,11 @@ extern void set_cpus_allowed_common(struct task_struct *p, const struct cpumask 
 
 bool __cpu_overutilized(int cpu, int delta);
 bool cpu_overutilized(int cpu);
+
+extern void update_rq_clock_pelt(struct rq *rq, s64 delta);
+extern void update_idle_rq_clock_pelt(struct rq *rq);
+extern u64 rq_clock_pelt(struct rq *rq);
+extern u64 cfs_rq_clock_pelt(struct cfs_rq *cfs_rq);
 
 #endif
 
