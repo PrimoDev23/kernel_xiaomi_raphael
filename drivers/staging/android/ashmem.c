@@ -313,8 +313,6 @@ static ssize_t ashmem_read(struct file *file, char __user *buf,
 	if (!asma->file)
 		return -EBADF;
 
-	mutex_unlock(&ashmem_mutex);
-
 	/*
 	 * asma and asma->file are used outside the lock here.  We assume
 	 * once asma->file is set it will never be changed, and will not
