@@ -45,10 +45,15 @@
 
 static atomic_long_t name_counter;
 static struct kmem_cache *kmem_attach_pool;
+static struct kmem_cache *kmem_dma_buf_pool;
 
 void __init init_dma_buf_kmem_pool(void)
 {
 	kmem_attach_pool = KMEM_CACHE(dma_buf_attachment, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
+	kmem_dma_buf_pool = kmem_cache_create("dma_buf",
+		(sizeof(struct dma_buf) + sizeof(struct reservation_object)),
+		(sizeof(struct dma_buf) + sizeof(struct reservation_object)),
+		SLAB_HWCACHE_ALIGN | SLAB_PANIC, NULL);
 }
 
 static inline int is_dma_buf_file(struct file *);
@@ -107,7 +112,10 @@ static int dma_buf_release(struct inode *inode, struct file *file)
 
 	module_put(dmabuf->owner);
 	kfree(dmabuf->name);
-	kfree(dmabuf);
+	if (dmabuf->from_kmem)
+		kmem_cache_free(kmem_dma_buf_pool, dmabuf);
+	else
+		kfree(dmabuf);
 	return 0;
 }
 
@@ -440,6 +448,7 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info)
 	char *bufname;
 	int ret;
 	long cnt;
+	bool from_kmem;
 
 	if (!exp_info->resv)
 		alloc_size += sizeof(struct reservation_object);
@@ -468,7 +477,16 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info)
 		goto err_module;
 	}
 
-	dmabuf = kzalloc(alloc_size, GFP_KERNEL);
+	from_kmem = (alloc_size ==
+		     (sizeof(struct dma_buf) + sizeof(struct reservation_object)));
+
+	if (from_kmem) {
+		dmabuf = kmem_cache_zalloc(kmem_dma_buf_pool, GFP_KERNEL);
+		dmabuf->from_kmem = true;
+	} else {
+		dmabuf = kzalloc(alloc_size, GFP_KERNEL);
+	}
+
 	if (!dmabuf) {
 		ret = -ENOMEM;
 		goto err_name;
@@ -514,7 +532,10 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info)
 	return dmabuf;
 
 err_dmabuf:
-	kfree(dmabuf);
+	if (from_kmem)
+		kmem_cache_free(kmem_dma_buf_pool, dmabuf);
+	else
+		kfree(dmabuf);
 err_name:
 	kfree(bufname);
 err_module:
