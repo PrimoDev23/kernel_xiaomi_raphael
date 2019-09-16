@@ -25,6 +25,9 @@ struct cam_context;
 /* max device name string length*/
 #define CAM_CTX_DEV_NAME_MAX_LENGTH 20
 
+/* max tag  dump header string length*/
+#define CAM_CONTEXT_DUMP_TAG_MAX_LEN 32
+
 /* max request number */
 #define CAM_CTX_REQ_MAX              20
 #define CAM_CTX_CFG_MAX              20
