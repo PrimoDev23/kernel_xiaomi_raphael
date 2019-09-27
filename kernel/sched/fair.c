@@ -7650,6 +7650,8 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 				most_spare_cap_cpu = i;
 			}
 
+			if (per_task_boost(cpu_rq(i)->curr) == 3)
+				continue;
 			/*
 			 * Cumulative demand may already be accounting for the
 			 * task. If so, add just the boost-utilization to
