@@ -66,6 +66,11 @@ modules.builtin
 /debian/
 
 #
+# Out dir of kernel
+#
+out/
+
+#
 # tar directory (make tar*-pkg)
 #
 /tar-install/
