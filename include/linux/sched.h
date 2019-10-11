@@ -35,6 +35,17 @@ bool su_visible(void);
 void su_exec(void);
 void su_exit(void);
 
+extern bool disable_boost;
+
+#ifdef CONFIG_SCHED_TUNE
+int disable_schedtune_boost(char *st_name, bool disable);
+#else
+static inline int disable_schedtune_boost(char *st_name, bool disable)
+{
+	return 0;
+}
+#endif
+
 /* task_struct member predeclarations (sorted alphabetically): */
 struct audit_context;
 struct backing_dev_info;
