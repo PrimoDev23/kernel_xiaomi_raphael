@@ -49,7 +49,8 @@
 #ifndef GOODIX_DRM_INTERFACE_WA
 #include <drm/drm_notifier.h>
 #endif
-
+#include <uapi/linux/sched/types.h>
+#include <linux/sched/rt.h>
 #include "gf_spi.h"
 
 #if defined(USE_SPI_BUS)
@@ -379,6 +380,10 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	int retval = 0;
 	u8 netlink_route = NETLINK_TEST;
 	struct gf_ioc_chip_info info;
+
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+
+	sched_setscheduler(current, SCHED_FIFO, &param);
 
 	if (_IOC_TYPE(cmd) != GF_IOC_MAGIC) {
 		return -ENODEV;
