@@ -29,6 +29,8 @@
 #include <asm/unaligned.h>
 #include <linux/vmalloc.h>
 #include <linux/kthread.h>
+#include <uapi/linux/sched/types.h>
+#include <linux/sched/rt.h>
 #include <linux/version.h>
 #include <linux/delay.h>
 #include <linux/mutex.h>
@@ -96,6 +98,8 @@
 #define CONFIG_TOUCHSCREEN_GOODIX_DEBUG_FS
 
 #define CONFIG_GOODIX_HWINFO
+
+static struct sched_param param = { .sched_priority = MAX_RT_PRIO / 2 };
 
 /*
  * struct goodix_module - external modules container
@@ -468,10 +472,11 @@ struct goodix_ts_core {
 #endif
 	struct notifier_block power_supply_notifier;
 	struct notifier_block bl_notifier;
-	struct workqueue_struct *event_wq;
-	struct work_struct suspend_work;
-	struct work_struct resume_work;
-	struct work_struct power_supply_work;
+	struct kthread_worker goodix_worker;
+	struct task_struct *goodix_worker_thread;
+	struct kthread_work suspend_work;
+	struct kthread_work resume_work;
+	struct kthread_work power_supply_work;
 	atomic_t suspend_stat;
 	int is_usb_exist;
 	int gesture_enabled;
@@ -501,7 +506,7 @@ struct goodix_ts_core {
 struct goodix_mode_switch {
 	struct goodix_ts_core *info;
 	unsigned char mode;
-	struct work_struct switch_mode_work;
+	struct kthread_work switch_mode_work;
 };
 
 /* external module structures */
