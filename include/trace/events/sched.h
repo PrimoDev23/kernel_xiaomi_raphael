@@ -875,48 +875,6 @@ extern unsigned int walt_disabled;
 #endif
 
 /*
- * Tracepoint for cfs_rq load tracking:
- */
-TRACE_EVENT(sched_load_cfs_rq,
-
-	TP_PROTO(struct cfs_rq *cfs_rq),
-
-	TP_ARGS(cfs_rq),
-
-	TP_STRUCT__entry(
-		__field(	int,		cpu			)
-		__dynamic_array(char,		path,
-				__trace_sched_path(cfs_rq, NULL, 0)	)
-		__field(	unsigned long,	load			)
-		__field(	unsigned long,	util			)
-		__field(	unsigned long,	util_pelt          	)
-		__field(	unsigned long,	util_walt          	)
-	),
-
-	TP_fast_assign(
-		__entry->cpu	= __trace_sched_cpu(cfs_rq, NULL);
-		__trace_sched_path(cfs_rq, __get_dynamic_array(path),
-				   __get_dynamic_array_len(path));
-		__entry->load	= cfs_rq->runnable_load_avg;
-		__entry->util	= cfs_rq->avg.util_avg;
-		__entry->util_pelt = cfs_rq->avg.util_avg;
-		__entry->util_walt = 0;
-#ifdef CONFIG_SCHED_WALT
-		if (&cfs_rq->rq->cfs == cfs_rq) {
-			walt_util(__entry->util_walt,
-				  cfs_rq->rq->prev_runnable_sum);
-			if (!walt_disabled && sysctl_sched_use_walt_cpu_util)
-				__entry->util = __entry->util_walt;
-		}
-#endif
-	),
-
-	TP_printk("cpu=%d path=%s load=%lu util=%lu util_pelt=%lu util_walt=%lu",
-		  __entry->cpu, __get_str(path), __entry->load, __entry->util,
-		  __entry->util_pelt, __entry->util_walt)
-);
-
-/*
  * Tracepoint for rt_rq load tracking:
  */
 struct rt_rq;
