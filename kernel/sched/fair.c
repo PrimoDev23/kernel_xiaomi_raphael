@@ -3554,11 +3554,11 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
 	return decayed || removed_load;
 }
 
-int update_rt_rq_load_avg(u64 now, int cpu, struct rt_rq *rt_rq, int running)
+int update_rt_rq_load_avg(u64 now, int cpu, struct rq *rq, int running)
 {
 	int ret;
 
-	ret = ___update_load_avg(now, cpu, &rt_rq->avg, running, running, NULL, rt_rq);
+	ret = ___update_load_avg(now, cpu, &rq->rt->avg, running, running, NULL, rq->rt);
 
 	return ret;
 }
@@ -3924,7 +3924,7 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
 	return 0;
 }
 
-int update_rt_rq_load_avg(u64 now, int cpu, struct rt_rq *rt_rq, int running)
+int update_rt_rq_load_avg(u64 now, int cpu, struct rq *rq, int running)
 {
 	return 0;
 }
@@ -9642,7 +9642,7 @@ static void update_blocked_averages(int cpu)
 		if (cfs_rq_is_decayed(cfs_rq))
 			list_del_leaf_cfs_rq(cfs_rq);
 	}
-	update_rt_rq_load_avg(rq_clock_task(rq), cpu, &rq->rt, 0);
+	update_rt_rq_load_avg(rq_clock_task(rq), cpu, &rq, 0);
 	update_dl_rq_load_avg(rq_clock_task(rq), rq, 0);
 	update_irq_load_avg(rq, 0);
 #ifdef CONFIG_NO_HZ_COMMON
@@ -9707,7 +9707,7 @@ static inline void update_blocked_averages(int cpu)
 	rq_lock_irqsave(rq, &rf);
 	update_rq_clock(rq);
 	update_cfs_rq_load_avg(cfs_rq_clock_task(cfs_rq), cfs_rq, true);
-	update_rt_rq_load_avg(rq_clock_task(rq), cpu, &rq->rt, 0);
+	update_rt_rq_load_avg(rq_clock_task(rq), cpu, &rq, 0);
 	update_dl_rq_load_avg(rq_clock_task(rq), rq, 0);
 	update_irq_load_avg(rq, 0);
 #ifdef CONFIG_NO_HZ_COMMON
