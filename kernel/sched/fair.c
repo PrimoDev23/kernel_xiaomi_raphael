@@ -3790,20 +3790,28 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 
 int update_rt_rq_load_avg(u64 now, int cpu, struct rq *rq, int running)
 {
-	int ret;
+	if (___update_load_sum(now, &rq->avg_rt,
+				running,
+				running,
+				running)) {
+		___update_load_avg(&rq->avg_rt, 1, 1, &rq->rt);
+		return 1;
+	}
 
-	ret = ___update_load_avg(now, cpu, &rq->rt->avg, running, running, NULL, rq->rt);
-
-	return ret;
+	return 0;
 }
 
 int update_dl_rq_load_avg(u64 now, struct rq *rq, int running)
 {
-	int ret;
+	if (___update_load_sum(now, &rq->avg_dl,
+				running,
+				running,
+				running)) {
+		___update_load_avg(&rq->avg_dl, 1, 1, &rq->rt);
+		return 1;
+	}
 
-	ret = ___update_load_avg(now, rq->cpu, &rq->avg_dl, running, running, NULL, &rq->rt);
-
-	return ret;
+	return 0;
 }
 
 #ifdef CONFIG_HAVE_SCHED_AVG_IRQ
@@ -3816,14 +3824,24 @@ int update_irq_load_avg(struct rq *rq, u64 running)
 	 * but we don't when. Let be pessimistic and assume that interrupt has
 	 * happened just before the update. This is not so far from reality
 	 * because interrupt will most probably wake up task and trig an update
-	 * of rq clock during which the metric si updated.
+	 * of rq clock during which the metric is updated.
 	 * We start to decay with normal context time and then we add the
 	 * interrupt context time.
 	 * We can safely remove running from rq->clock because
 	 * rq->clock += delta with delta >= running
 	 */
-	ret = ___update_load_avg(rq->clock - running, rq->cpu, &rq->avg_irq, 0, 0, NULL, rt_rq);
-	ret += ___update_load_avg(rq->clock, rq->cpu, &rq->avg_irq, 1, 1, NULL, rt_rq);
+	ret = ___update_load_sum(rq->clock - running, &rq->avg_irq,
+				0,
+				0,
+				0);
+	ret += ___update_load_sum(rq->clock, &rq->avg_irq,
+				1,
+				1,
+				1);
+
+	if (ret) {
+		___update_load_avg(&rq->avg_irq, 1, 1, rt_rq);
+	}
 
 	return ret;
 }
