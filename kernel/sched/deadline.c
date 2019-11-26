@@ -17,6 +17,7 @@
  */
 #include "sched.h"
 #include "walt.h"
+#include "pelt.h"
 
 #include <linux/slab.h>
 #include <uapi/linux/sched/types.h>

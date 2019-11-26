@@ -42,6 +42,7 @@
 #include "walt.h"
 #include "../workqueue_internal.h"
 #include "../smpboot.h"
+#include "pelt.h"
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>

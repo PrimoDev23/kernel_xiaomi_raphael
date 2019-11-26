@@ -12,6 +12,7 @@
 #include "tune.h"
 
 #include "walt.h"
+#include "pelt.h"
 
 int sched_rr_timeslice = RR_TIMESLICE;
 int sysctl_sched_rr_timeslice = (MSEC_PER_SEC / HZ) * RR_TIMESLICE;
@@ -1664,8 +1665,6 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 	return p;
 }
 
-extern int update_rt_rq_load_avg(u64 now, int cpu, struct rq *rq, int running);
-
 static struct task_struct *
 pick_next_task_rt(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 {
@@ -1712,7 +1711,7 @@ pick_next_task_rt(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	queue_push_tasks(rq);
 
 	if (p)
-		update_rt_rq_load_avg(rq_clock_task(rq), cpu_of(rq), rq,
+		update_rt_rq_load_avg(rq_clock_task(rq), rq,
 					rq->curr->sched_class == &rt_sched_class);
 
 	/*
@@ -1721,7 +1720,7 @@ pick_next_task_rt(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	 * rt task
 	 */
 	if (rq->curr->sched_class != &rt_sched_class)
-		update_rt_rq_load_avg(rq_clock_pelt(rq), cpu_of(rq), rq, 0);
+		update_rt_rq_load_avg(rq_clock_pelt(rq), rq, 0);
 
 	return p;
 }
@@ -1730,7 +1729,7 @@ static void put_prev_task_rt(struct rq *rq, struct task_struct *p)
 {
 	update_curr_rt(rq);
 
-	update_rt_rq_load_avg(rq_clock_pelt(rq), cpu_of(rq), rq, 1);
+	update_rt_rq_load_avg(rq_clock_pelt(rq), rq, 1);
 
 	/*
 	 * The previous task needs to be made eligible for pushing
@@ -2565,7 +2564,7 @@ static void task_tick_rt(struct rq *rq, struct task_struct *p, int queued)
 	struct sched_rt_entity *rt_se = &p->rt;
 
 	update_curr_rt(rq);
-	update_rt_rq_load_avg(rq_clock_pelt(rq), cpu_of(rq), rq, 1);
+	update_rt_rq_load_avg(rq_clock_pelt(rq), rq, 1);
 
 	watchdog(rq, p);
 
