@@ -2550,6 +2550,7 @@ static struct platform_driver goodix_ts_driver = {
 	.driver = {
 		.name = GOODIX_CORE_DRIVER_NAME,
 		.owner = THIS_MODULE,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 #ifdef CONFIG_PM
 		.pm = &dev_pm_ops,
 #endif
