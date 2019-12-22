@@ -1182,7 +1182,7 @@ static DEVICE_ATTR(fod_test, (S_IRUGO | S_IWUSR | S_IWGRP),
 static DEVICE_ATTR(touch_suspend_notify, (S_IRUGO | S_IRGRP),
 			gtp_touch_suspend_notify_show, NULL);
 
-static void goodix_switch_mode_work(struct kthread_work *work)
+static void goodix_switch_mode_work(struct work_struct *work)
 {
 	struct goodix_mode_switch *ms =
 		container_of(work, struct goodix_mode_switch, switch_mode_work);
@@ -1222,9 +1222,9 @@ static int goodix_input_event(struct input_dev *dev, unsigned int type,
 			if (ms != NULL) {
 				ms->info = core_data;
 				ms->mode = (unsigned char)value;
-				kthread_init_work(&ms->switch_mode_work,
-					&goodix_switch_mode_work);
-				kthread_queue_work(&core_data->goodix_worker, &ms->switch_mode_work);
+				INIT_WORK(&ms->switch_mode_work,
+					goodix_switch_mode_work);
+				schedule_work(&ms->switch_mode_work);
 			} else {
 				ts_err("failed in allocating memory for switching mode");
 				return -ENOMEM;
@@ -1448,7 +1448,7 @@ static void goodix_ts_esd_off(struct goodix_ts_core *core)
 	mutex_lock(&ts_esd->esd_mutex);
 	if (ts_esd->esd_on == true) {
 		ts_esd->esd_on = false;
-		cancel_delayed_work_sync(&ts_esd->esd_work);
+		cancel_delayed_work(&ts_esd->esd_work);
 		mutex_unlock(&ts_esd->esd_mutex);
 		ts_info("Esd off");
 		return;
@@ -1496,7 +1496,7 @@ int goodix_ts_esd_init(struct goodix_ts_core *core)
 	u8 data = GOODIX_ESD_TICK_WRITE_DATA;
 	int r;
 
-	INIT_DELAYED_WORK(&ts_esd->esd_work, &goodix_ts_esd_work);
+	INIT_DELAYED_WORK(&ts_esd->esd_work, goodix_ts_esd_work);
 	mutex_init(&ts_esd->esd_mutex);
 	ts_esd->ts_core = core;
 	ts_esd->esd_on = false;
@@ -1744,7 +1744,7 @@ int goodix_ts_fb_notifier_callback(struct notifier_block *self,
 
 	if (fb_event && fb_event->data && core_data) {
 		blank = *(int *)(fb_event->data);
-		kthread_flush_worker(core_data->goodix_worker);
+		flush_workqueue(core_data->event_wq);
 		if (event == DRM_EVENT_BLANK && (blank == DRM_BLANK_POWERDOWN ||
 			blank == DRM_BLANK_LP1 || blank == DRM_BLANK_LP2)) {
 			ts_info("touchpanel suspend .....blank=%d\n",blank);
@@ -1757,7 +1757,7 @@ int goodix_ts_fb_notifier_callback(struct notifier_block *self,
 			//if (!atomic_read(&core_data->suspend_stat))
 			ts_info("core_data->suspend_stat = %d\n",atomic_read(&core_data->suspend_stat));
 			ts_info("touchpanel resume");
-			kthread_queue_work(&core_data->goodix_worker, &core_data->resume_work);
+			queue_work(core_data->event_wq, &core_data->resume_work);
 		}
 	}
 
@@ -1791,13 +1791,13 @@ static void goodix_ts_lateresume(struct early_suspend *h)
 
 #ifdef CONFIG_PM
 #ifdef CONFIG_DRM
-static void goodix_ts_resume_work(struct kthread_work *work)
+static void goodix_ts_resume_work(struct work_struct *work)
 {
 	struct goodix_ts_core *core_data =
 		container_of(work, struct goodix_ts_core, resume_work);
 	goodix_ts_resume(core_data);
 }
-static void goodix_ts_suspend_work(struct kthread_work *work)
+static void goodix_ts_suspend_work(struct work_struct *work)
 {
 	struct goodix_ts_core *core_data =
 		container_of(work, struct goodix_ts_core, suspend_work);
@@ -1853,9 +1853,9 @@ static void tpdbg_shutdown(struct goodix_ts_core *core_data, bool sleep)
 static void tpdbg_suspend(struct goodix_ts_core *core_data, bool enable)
 {
 	if (enable)
-		kthread_queue_work(&core_data->goodix_worker, &core_data->suspend_work);
+		queue_work(core_data->event_wq, &core_data->suspend_work);
 	else
-		kthread_queue_work(&core_data->goodix_worker, &core_data->resume_work);
+		queue_work(core_data->event_wq, &core_data->resume_work);
 }
 
 static int tpdbg_open(struct inode *inode, struct file *file)
@@ -2054,7 +2054,7 @@ static struct attribute *goodix_attr_group[] = {
 	NULL,
 };
 
-static void gtp_power_supply_work(struct kthread_work *work)
+static void gtp_power_supply_work(struct work_struct *work)
 {
 	struct goodix_ts_core *core_data =
 		container_of(work, struct goodix_ts_core, power_supply_work);
@@ -2087,7 +2087,7 @@ static int gtp_power_supply_event(struct notifier_block *nb, unsigned long event
 {
 	struct goodix_ts_core *ts_core = container_of(nb, struct goodix_ts_core, power_supply_notifier);
 
-	kthread_queue_work(&ts_core->goodix_worker, &ts_core->power_supply_work);
+	queue_work(ts_core->event_wq, &ts_core->power_supply_work);
 
 	return 0;
 }
@@ -2404,20 +2404,17 @@ static int goodix_ts_probe(struct platform_device *pdev)
 		goto out;
 	}
 
-	kthread_init_worker(&core_data->goodix_worker);
-        core_data->goodix_worker_thread = kthread_run(kthread_worker_fn, &core_data->goodix_worker, "goodix_worker_thread");
-	if (IS_ERR(core_data->goodix_worker_thread)) {
+	core_data->event_wq = alloc_workqueue("gdt-event-queue",
+				WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE, 1);
+	if (!core_data->event_wq) {
 		ts_err("goodix cannot create work thread");
 		r = -ENOMEM;
 		goto out;
 	}
 
+	INIT_WORK(&core_data->resume_work, goodix_ts_resume_work);
+	INIT_WORK(&core_data->suspend_work, goodix_ts_suspend_work);
 	INIT_WORK(&core_data->sleep_work, goodix_ts_sleep_work);
-
-	sched_setscheduler(core_data->goodix_worker_thread, SCHED_FIFO, &param);
-
-	kthread_init_work(&core_data->resume_work, &goodix_ts_resume_work);
-	kthread_init_work(&core_data->suspend_work, &goodix_ts_suspend_work);
 	device_init_wakeup(&pdev->dev, 1);
 
 	core_data->is_usb_exist = -1;
@@ -2445,7 +2442,7 @@ static int goodix_ts_probe(struct platform_device *pdev)
 
 	core_data->power_supply_notifier.notifier_call = gtp_power_supply_event;
 	power_supply_reg_notifier(&core_data->power_supply_notifier);
-	kthread_init_work(&core_data->power_supply_work, &gtp_power_supply_work);
+	INIT_WORK(&core_data->power_supply_work, gtp_power_supply_work);
 
 	core_data->bl_notifier.notifier_call = goodix_bl_state_chg_callback;
 	if (backlight_register_notifier(&core_data->bl_notifier) < 0) {
