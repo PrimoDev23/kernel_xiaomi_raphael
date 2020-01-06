@@ -682,6 +682,10 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	if (rc < 0)
 		pr_err("failed to update dcs backlight:%d\n", bl_lvl);
 
+#ifdef CONFIG_KLAPSE
+	set_rgb_slider(bl_lvl);
+#endif
+
 	return rc;
 }
 
@@ -1338,10 +1342,6 @@ static int dsi_panel_parse_misc_host_config(struct dsi_host_common_cfg *host,
 		host->t_clk_post = val;
 		pr_debug("[%s] t_clk_post = %d\n", name, val);
 	}
-	
-#ifdef CONFIG_KLAPSE
-	set_rgb_slider(bl_lvl);
-#endif
 
 	val = 0;
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-t-clk-pre", &val);
