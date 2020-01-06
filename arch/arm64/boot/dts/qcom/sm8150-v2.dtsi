@@ -615,7 +615,7 @@
 
 	/delete-property/qcom,initial-pwrlevel;
 
-	qcom,initial-pwrlevel = <7>;
+	qcom,initial-pwrlevel = <8>;
 
 	operating-points-v2 = <&gpu_opp_table_v2>;
 
