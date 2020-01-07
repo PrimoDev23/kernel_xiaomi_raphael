@@ -6942,7 +6942,6 @@ DECLARE_PER_CPU(cpumask_var_t, select_idle_mask);
 void __init sched_init(void)
 {
 	int i, j;
-	unsigned long alloc_size = 0;
 	unsigned long ptr = 0;
 
 	sched_clock_init();

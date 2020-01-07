@@ -1762,8 +1762,6 @@ static int f2fs_mpage_readpages(struct address_space *mapping,
 	sector_t last_block_in_bio = 0;
 	struct inode *inode = mapping->host;
 	struct f2fs_map_blocks map;
-	bool bio_encrypted;
-	u64 dun;
 	int ret = 0;
 
 	map.m_pblk = 0;
