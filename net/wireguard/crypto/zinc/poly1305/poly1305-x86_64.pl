@@ -35,7 +35,7 @@
 # Skylake-X system performance. Since we are likely to suppress
 # AVX512F capability flag [at least on Skylake-X], conversion serves
 # as kind of "investment protection". Note that next *lake processor,
-# Cannonlake, has AVX512IFMA code path to execute...
+# Cannolake, has AVX512IFMA code path to execute...
 #
 # Numbers are cycles per processed byte with poly1305_blocks alone,
 # measured with rdtsc at fixed clock frequency.
@@ -109,7 +109,7 @@ sub declare_function() {
 	my ($name, $align, $nargs) = @_;
 	if($kernel) {
 		$code .= ".align $align\n";
-		$code .= "SYM_FUNC_START($name)\n";
+		$code .= "ENTRY($name)\n";
 		$code .= ".L$name:\n";
 	} else {
 		$code .= ".globl	$name\n";
@@ -122,7 +122,7 @@ sub declare_function() {
 sub end_function() {
 	my ($name) = @_;
 	if($kernel) {
-		$code .= "SYM_FUNC_END($name)\n";
+		$code .= "ENDPROC($name)\n";
 	} else {
 		$code .= ".size   $name,.-$name\n";
 	}
