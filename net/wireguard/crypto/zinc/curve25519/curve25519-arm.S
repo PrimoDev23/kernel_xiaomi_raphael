@@ -15,7 +15,7 @@
 .arch armv7-a
 .align 4
 
-SYM_FUNC_START(curve25519_neon)
+ENTRY(curve25519_neon)
 	push		{r4-r11, lr}
 	mov		ip, sp
 	sub		r3, sp, #704
@@ -2060,5 +2060,5 @@ SYM_FUNC_START(curve25519_neon)
 	movw		r0, #0
 	mov		sp, ip
 	pop		{r4-r11, pc}
-SYM_FUNC_END(curve25519_neon)
+ENDPROC(curve25519_neon)
 #endif
