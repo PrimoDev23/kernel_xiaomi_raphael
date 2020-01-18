@@ -1,3 +1,11 @@
+config HOUSTON
+	default n
+	bool "to collect system-wide and pmu data"
+	help
+	 Realtime temperature monitor
+config CONTROL_CENTER
+	default n
+	bool "control center"
 config AIGOV
 	default y
 	bool "A governor which using ai predicted info as input"

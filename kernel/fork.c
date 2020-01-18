@@ -93,6 +93,12 @@
 #include <linux/cpufreq_times.h>
 #include <linux/simple_lmk.h>
 
+// tedlin@ASTI 2019/06/12 add for CONFIG_HOUSTON
+#include <linux/houston/houston_helper.h>
+
+// tedlin@ASTI 2019/06/12 add for CONFIG_CONTROL_CENTER
+#include <linux/control_center/control_center_helper.h>
+
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
 #include <linux/uaccess.h>
@@ -1973,6 +1979,14 @@ static __latent_entropy struct task_struct *copy_process(
 
 	trace_task_newtask(p, clone_flags);
 	uprobe_copy_process(p, clone_flags);
+
+// tedlin@ASTI 2019/06/12 add for CONFIG_HOUSTON
+	if(likely(!IS_ERR(p))){
+		ht_perf_event_init(p);
+		ht_rtg_init(p);
+// tedlin@ASTI 2019/06/12 add for CONFIG_CONTROL_CENTER
+		cc_tsk_init((void*) p);
+	}	
 
 	return p;
 

@@ -16,6 +16,7 @@
 #include <trace/events/power.h>
 #include <linux/cpuset.h>
 #include <linux/aigov/aigov_helper.h>
+#include <linux/houston/houston_helper.h>
 
 #include "sched.h"
 
@@ -110,6 +111,11 @@ static bool sugov_should_update_freq(struct sugov_policy *sg_policy, u64 time)
 static bool sugov_update_next_freq(struct sugov_policy *sg_policy, u64 time,
 				   unsigned int next_freq)
 {
+#ifdef CONFIG_CONTROL_CENTER
+	/* keep requested freq */
+	sg_policy->policy->req_freq = next_freq;
+#endif
+
 	if (sg_policy->next_freq == next_freq)
 		return false;
 
@@ -129,7 +135,7 @@ static void sugov_fast_switch(struct sugov_policy *sg_policy, u64 time,
 		return;
 
 	next_freq = cpufreq_driver_fast_switch(policy, next_freq);
-	if (!next_freq)
+	if (!next_freq || (next_freq == policy->cur))
 		return;
 
 	policy->cur = next_freq;
@@ -138,6 +144,7 @@ static void sugov_fast_switch(struct sugov_policy *sg_policy, u64 time,
 		for_each_cpu(cpu, policy->cpus)
 			trace_cpu_frequency(next_freq, cpu);
 	}
+	cpufreq_stats_record_transition(policy, next_freq);
 }
 
 static void sugov_deferred_update(struct sugov_policy *sg_policy, u64 time,
@@ -913,6 +920,9 @@ static int sugov_start(struct cpufreq_policy *policy)
 							sugov_update_shared :
 							sugov_update_single);
 	}
+#ifdef CONFIG_CONTROL_CENTER
+	policy->cc_enable = true;
+#endif
 	return 0;
 }
 
@@ -920,6 +930,10 @@ static void sugov_stop(struct cpufreq_policy *policy)
 {
 	struct sugov_policy *sg_policy = policy->governor_data;
 	unsigned int cpu;
+
+#ifdef CONFIG_CONTROL_CENTER
+	policy->cc_enable = false;
+#endif
 
 	for_each_cpu(cpu, policy->cpus)
 		cpufreq_remove_update_util_hook(cpu);

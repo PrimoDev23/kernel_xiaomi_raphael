@@ -28,6 +28,8 @@
 #include <linux/of.h>
 #include "governor.h"
 
+#include <linux/control_center/control_center_helper.h>
+
 static struct class *devfreq_class;
 
 /*
@@ -253,7 +255,9 @@ int update_devfreq(struct devfreq *devfreq)
 	unsigned long freq, cur_freq;
 	int err = 0;
 	u32 flags = 0;
-
+#ifdef CONFIG_CONTROL_CENTER
+	unsigned long freq_tmp;
+#endif
 	if (!mutex_is_locked(&devfreq->lock)) {
 		WARN(true, "devfreq->lock must be locked by the caller.\n");
 		return -EINVAL;
@@ -288,7 +292,27 @@ int update_devfreq(struct devfreq *devfreq)
 		freq = devfreq->max_freq;
 		flags |= DEVFREQ_FLAG_LEAST_UPPER_BOUND; /* Use LUB */
 	}
-
+#ifdef CONFIG_CONTROL_CENTER
+	//if (cc_ddr_set_enable) {
+	//	if (devfreq->dev.cc_marked) {
+	//		freq = max((unsigned long)atomic_read(&cc_expect_ddrfreq), freq);
+	//	}
+	//}
+	//if (cc_ddr_lock_enable) {
+	//	if (devfreq->dev.cc_marked) {
+	//		freq_tmp = atomic_read(&cc_expect_ddrfreq);
+	//		if (freq_tmp)
+	//			freq = freq_tmp;
+	//	}
+	//}
+	if (cc_ddr_boost_enable) {
+		if (devfreq->dev.cc_marked) {
+			freq_tmp = atomic_read(&cc_expect_ddrfreq);
+			if (freq_tmp)
+				freq = freq_tmp;
+		}
+	}
+#endif
 	if (devfreq->profile->get_cur_freq)
 		devfreq->profile->get_cur_freq(devfreq->dev.parent, &cur_freq);
 	else
@@ -591,6 +615,11 @@ struct devfreq *devfreq_add_device(struct device *dev,
 	devfreq_set_freq_limits(devfreq);
 
 	dev_set_name(&devfreq->dev, "%s", dev_name(dev));
+#ifdef CONFIG_CONTROL_CENTER
+	if (dev_name(dev))
+		devfreq->dev.cc_marked = cc_is_ddrfreq_related(dev_name(dev));
+#endif
+
 	err = device_register(&devfreq->dev);
 	if (err) {
 		mutex_unlock(&devfreq->lock);

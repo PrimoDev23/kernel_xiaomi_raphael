@@ -40,6 +40,9 @@
 #include "tune.h"
 #include "walt.h"
 
+// tedlin@ASTI 2019/06/12 add for CONFIG_HOUSTON
+#include <linux/houston/houston_helper.h>
+
 #ifdef CONFIG_SMP
 static inline bool task_fits_max(struct task_struct *p, int cpu);
 #endif /* CONFIG_SMP */
@@ -7486,6 +7489,12 @@ static int start_cpu(struct task_struct *p, bool boosted,
 {
 	struct root_domain *rd = cpu_rq(smp_processor_id())->rd;
 	int start_cpu = -1;
+
+// tedlin@ASTI 2019/06/12 add for CONFIG_HOUSTON
+	if (/*is_uxtop && */current->ravg.demand_scaled >= p->ravg.demand_scaled) {
+		/* add 'current' into RTG list */
+		ht_rtg_list_add_tail(current);
+	}
 
 	if (boosted) {
 		if (rd->mid_cap_orig_cpu != -1 &&

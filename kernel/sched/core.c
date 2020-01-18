@@ -46,6 +46,9 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
 
+// tedlin@ASTI 2019/06/12 add for CONFIG_HOUSTON
+#include <linux/houston/houston_helper.h>
+
 static atomic_t __su_instances;
 
 int su_instances(void)
@@ -3626,6 +3629,9 @@ static void __sched notrace __schedule(bool preempt)
 		++*switch_count;
 
 		trace_sched_switch(preempt, prev, next);
+
+// tedlin@ASTI 2019/06/12 add for CONFIG_HOUSTON
+		ht_sched_switch_update(prev, next);
 
 		/* Also unlocks the rq: */
 		rq = context_switch(rq, prev, next, &rf);
