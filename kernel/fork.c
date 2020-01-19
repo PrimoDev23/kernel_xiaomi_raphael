@@ -582,6 +582,16 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	tsk->splice_pipe = NULL;
 	tsk->task_frag.page = NULL;
 	tsk->wake_q.next = NULL;
+#ifdef CONFIG_OPCHAIN
+	tsk->utask_tag = 0;
+	tsk->utask_tag_base = 0;
+	tsk->etask_claim = 0;
+	tsk->claim_cpu = -1;
+	tsk->utask_slave = 0;
+#endif
+// add for chainboost CONFIG_ONEPLUS_CHAIN_BOOST
+	tsk->main_boost_switch = 0;
+	tsk->main_wake_boost = 0;
 
 	account_kernel_stack(tsk, 1);
 

@@ -1368,6 +1368,14 @@ struct task_struct {
 	void				*security;
 #endif
 
+#ifdef CONFIG_OPCHAIN
+	u64 utask_tag;
+	u64 utask_tag_base;
+	int etask_claim;
+	int claim_cpu;
+	bool utask_slave;
+#endif
+
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
@@ -1417,6 +1425,10 @@ struct task_struct {
 	bool cc_enable;
 	struct cc_tsk_data* ctd;
 #endif
+
+// add for chainboost CONFIG_ONEPLUS_CHAIN_BOOST
+	int main_boost_switch;
+	int main_wake_boost;
 
 	/* CPU-specific state of this task: */
 	struct thread_struct		thread;
