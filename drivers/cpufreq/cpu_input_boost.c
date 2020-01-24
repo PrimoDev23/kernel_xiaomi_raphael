@@ -150,9 +150,15 @@ static void update_online_cpu_policy(void)
 	cpu = cpumask_first_and(cpu_lp_mask, cpu_online_mask);
 	cpufreq_update_policy(cpu);
 	cpu = cpumask_first_and(cpu_perf_mask, cpu_online_mask);
-	cpufreq_update_policy(cpu);
+
+	/* Only one cpu is online when suspended
+	 * Fix the WARN_ON in update policy */
+	if (cpu < CONFIG_NR_CPUS)
+		cpufreq_update_policy(cpu);
+
 	cpu = cpumask_first_and(cpu_perfp_mask, cpu_online_mask);
-	cpufreq_update_policy(cpu);
+	if (cpu < CONFIG_NR_CPUS)
+		cpufreq_update_policy(cpu);
 	put_online_cpus();
 }
 
