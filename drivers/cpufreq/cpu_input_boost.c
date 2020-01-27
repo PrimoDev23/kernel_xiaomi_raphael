@@ -14,6 +14,8 @@
 #include <linux/slab.h>
 #include <linux/version.h>
 
+#include <linux/ufs_boost.h>
+
 /* The sched_param struct is located elsewhere in newer kernels */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <uapi/linux/sched/types.h>
@@ -273,13 +275,23 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 	/* Unboost when the screen is off */
 	if (test_bit(SCREEN_OFF, &b->state)) {
 		policy->min = get_idle_freq(policy);
+		/* UFS unboost */
+		set_ufshcd_clkgate_enable_status(1);
+		set_ufshcd_hibern8_on_idle_enable_status(1);
 		return NOTIFY_OK;
 	}
 
 	/* Boost CPU to max frequency for max boost */
 	if (test_bit(MAX_BOOST, &b->state)) {
 		policy->min = get_max_boost_freq(policy);
+		/* UFS boost */
+		set_ufshcd_clkgate_enable_status(0);
+		set_ufshcd_hibern8_on_idle_enable_status(0);
 		return NOTIFY_OK;
+	}else{
+		/* UFS unboost */
+		set_ufshcd_clkgate_enable_status(1);
+		set_ufshcd_hibern8_on_idle_enable_status(1);
 	}
 
 	/*
@@ -444,4 +456,4 @@ unregister_cpu_notif:
 	cpufreq_unregister_notifier(&b->cpu_notif, CPUFREQ_POLICY_NOTIFIER);
 	return ret;
 }
-subsys_initcall(cpu_input_boost_init);
+late_initcall(cpu_input_boost_init);
