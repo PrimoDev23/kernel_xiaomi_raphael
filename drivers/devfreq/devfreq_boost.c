@@ -140,20 +140,23 @@ static void devfreq_max_unboost(struct work_struct *work)
 static void devfreq_update_boosts(struct boost_dev *b, unsigned long state)
 {
 	struct devfreq *df = b->df;
+	bool max_boost = false, input_boost = false;
 
 	mutex_lock(&df->lock);
 	if (test_bit(SCREEN_OFF, &state)) {
 		df->min_freq = df->profile->freq_table[0];
 		df->max_boost = false;
 	} else {
-		df->min_freq = test_bit(INPUT_BOOST, &state) ?
+		input_boost = test_bit(INPUT_BOOST, &state);
+		df->min_freq = input_boost ?
 			       min(b->boost_freq, df->max_freq) :
 			       df->profile->freq_table[0];
-		df->max_boost = test_bit(MAX_BOOST, &state);
+		max_boost = test_bit(MAX_BOOST, &state);
+		df->max_boost = max_boost;
 	}
 
 	//Set values from P4 PHAL
-	set_phal_values(df);
+	set_phal_values(df, max_boost ? MAX_BOOST : (input_boost ? INPUT_BOOST : 0));
 	
 	update_devfreq(df);
 	mutex_unlock(&df->lock);

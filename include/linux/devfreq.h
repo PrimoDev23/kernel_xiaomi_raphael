@@ -200,7 +200,7 @@ extern int devfreq_resume_device(struct devfreq *devfreq);
 extern int update_devfreq(struct devfreq *devfreq);
 
 #ifdef CONFIG_DEVFREQ_BOOST
-extern void set_phal_values(struct devfreq *df);
+extern void set_phal_values(struct devfreq *df, int boost_type);
 #endif
 
 /* Helper functions for devfreq user device driver with OPP. */

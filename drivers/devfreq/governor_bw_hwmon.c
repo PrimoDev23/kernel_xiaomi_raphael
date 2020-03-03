@@ -307,7 +307,7 @@ unsigned long to_mbps_zone(struct hwmon_node *node, unsigned long mbps)
 }
 
 #ifdef CONFIG_DEVFREQ_BOOST
-void set_phal_values(struct devfreq *df) {
+void set_phal_values(struct devfreq *df, int boost_type) {
 	unsigned long flags;
 	struct hwmon_node *node;
 
@@ -323,11 +323,11 @@ void set_phal_values(struct devfreq *df) {
 
 	spin_lock_irqsave(&irq_lock, flags);
 
-	if(df->max_boost) {
+	if (boost_type == 2 || boost_type == 1) { //MAX_BOOST || INPUT_BOOST
 		node->hyst_trigger_count = 0;
 		node->hist_memory = 0;
 		node->hyst_length = 0;
-	}else{
+	} else { //UNBOOST
 		node->hyst_trigger_count = 3;
 		node->hist_memory = 20;
 		node->hyst_length = 10;
