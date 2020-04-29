@@ -5207,15 +5207,14 @@ static struct snd_soc_ops sm8150_tdm_be_ops = {
 
 static int msm_fe_qos_prepare(struct snd_pcm_substream *substream)
 {
-	cpumask_t mask;
+	unsigned long mask;
 
 	if (pm_qos_request_active(&substream->latency_pm_qos_req))
 		pm_qos_remove_request(&substream->latency_pm_qos_req);
 
-	cpumask_clear(&mask);
-	cpumask_set_cpu(1, &mask); /* affine to core 1 */
-	cpumask_set_cpu(2, &mask); /* affine to core 2 */
-	atomic_set(&substream->latency_pm_qos_req.cpus_affine, *cpumask_bits(&mask));
+	mask |= BIT(1); /* affine to core 1 */
+	mask |= BIT(2); /* affine to core 2 */
+	atomic_set(&substream->latency_pm_qos_req.cpus_affine, &mask);
 
 	substream->latency_pm_qos_req.type = PM_QOS_REQ_AFFINE_CORES;
 
