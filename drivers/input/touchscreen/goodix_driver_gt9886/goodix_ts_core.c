@@ -36,6 +36,7 @@
 #include <linux/proc_fs.h>
 //#include <linux/wakelock.h>
 #include "goodix_ts_core.h"
+#include <linux/cpumask.h>
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 38)
 #include <linux/input/mt.h>
@@ -949,7 +950,8 @@ handled:
 int goodix_ts_irq_setup(struct goodix_ts_core *core_data)
 {
 	const struct goodix_ts_board_data *ts_bdata = board_data(core_data);
-	int r;
+	int r, cpu;
+	unsigned long mask;
 
 	/* if ts_bdata-> irq is invalid */
 	if (ts_bdata->irq <= 0) {
@@ -970,8 +972,14 @@ int goodix_ts_irq_setup(struct goodix_ts_core *core_data)
 	else
 		atomic_set(&core_data->irq_enabled, 1);
 
+	//Clean this up later and make a loop for it
+	for_each_cpu(cpu, cpu_lp_mask) {
+		mask |= BIT(cpu);
+	}
+
 	core_data->pm_touch_req.type = PM_QOS_REQ_AFFINE_IRQ;
 	core_data->pm_touch_req.irq = core_data->irq;
+	atomic_set(&core_data->pm_touch_req.cpus_affine, &mask);
 	pm_qos_add_request(&core_data->pm_touch_req, PM_QOS_CPU_DMA_LATENCY,
 			   PM_QOS_DEFAULT_VALUE);
 	return r;
