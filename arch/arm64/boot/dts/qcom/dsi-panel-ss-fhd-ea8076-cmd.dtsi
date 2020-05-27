@@ -236,6 +236,9 @@
 					39 01 00 00 01 00 03 F0 A5 A5];
 				qcom,mdss-dsi-dispparam-elvss-dimming-off-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-h-sync-pulse = <0>;
+
+			        qcom,partial-update-enabled = "single_roi";
+			        qcom,panel-roi-alignment = <1080 20 1080 20 1080 20>;
 			};
 		};
 	};
