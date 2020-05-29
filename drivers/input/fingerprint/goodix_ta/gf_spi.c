@@ -735,6 +735,7 @@ static const struct file_operations gf_fops = {
 #endif
 };
 
+#ifndef GOODIX_DRM_INTERFACE_WA
 static void set_fingerprintd_nice(int nice)
 {
 	struct task_struct *p;
@@ -748,7 +749,6 @@ static void set_fingerprintd_nice(int nice)
 	read_unlock(&tasklist_lock);
 }
 
-#ifndef GOODIX_DRM_INTERFACE_WA
 static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 					unsigned long val, void *data)
 {
