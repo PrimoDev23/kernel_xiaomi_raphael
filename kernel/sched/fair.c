@@ -9305,7 +9305,7 @@ static inline bool can_migrate_boosted_task(struct task_struct *p,
 	     task_in_related_thread_group(p) &&
 	     (capacity_orig_of(dst_cpu) < capacity_orig_of(src_cpu))) ||
 	    (schedtune_prefer_high_cap(p) && p->prio <= DEFAULT_PRIO &&
-	     is_min_capacity_cpu(dst_cpu)))
+	     !is_min_capacity_cpu(src_cpu) && is_min_capacity_cpu(dst_cpu)))
 		return false;
 	return true;
 }
