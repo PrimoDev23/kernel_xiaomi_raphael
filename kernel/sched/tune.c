@@ -709,6 +709,15 @@ static int prefer_idle_write_wrapper(struct cgroup_subsys_state *css,
 
 	return prefer_idle_write(css, cft, prefer_idle);
 }
+
+static int prefer_high_cap_write_wrapper(struct cgroup_subsys_state *css,
+				 struct cftype *cft, u64 prefer_high_cap)
+{
+	if (task_is_booster(current))
+		return 0;
+
+	prefer_high_cap_write(css, cft, prefer_high_cap);
+}
 #endif
 
 static struct cftype files[] = {
@@ -738,6 +747,11 @@ static struct cftype files[] = {
 		.name = "prefer_high_cap",
 		.read_u64 = prefer_high_cap_read,
 		.write_u64 = prefer_high_cap_write,
+	},
+	{
+		.name = "prefer_high_cap",
+		.read_u64 = prefer_high_cap_read,
+		.write_u64 = prefer_high_cap_write_wrapper,
 	},
 	{} /* terminate */
 };
@@ -769,16 +783,17 @@ struct st_data {
 	bool prefer_idle;
 	bool colocate;
 	bool no_override;
+	bool prefer_high_cap;
 };
 
 static void write_default_values(struct cgroup_subsys_state *css)
 {
 	static struct st_data st_targets[] = {
-		{ "audio-app",	0, 0, 0, 0 },
-		{ "background",	0, 0, 0, 0 },
-		{ "foreground",	0, 1, 0, 1 },
-		{ "rt",		0, 0, 0, 0 },
-		{ "top-app",	1, 1, 0, 1 },
+		{ "audio-app",	0, 0, 0, 0, 0 },
+		{ "background",	0, 0, 0, 0, 0 },
+		{ "foreground",	0, 1, 0, 1, 0 },
+		{ "rt",		0, 0, 0, 0, 0 },
+		{ "top-app",	1, 1, 0, 1, 1 },
 	};
 	int i;
 
@@ -786,12 +801,13 @@ static void write_default_values(struct cgroup_subsys_state *css)
 		struct st_data tgt = st_targets[i];
 
 		if (!strcmp(css->cgroup->kn->name, tgt.name)) {
-			pr_info("stune_assist: setting values for %s: boost=%d prefer_idle=%d colocate=%d no_override=%d\n",
+			pr_info("stune_assist: setting values for %s: boost=%d prefer_idle=%d colocate=%d no_override=%d prefer_high_cap=%d\n",
 				tgt.name, tgt.boost, tgt.prefer_idle,
-				tgt.colocate, tgt.no_override);
+				tgt.colocate, tgt.no_override, tgt.prefer_high_cap);
 
 			boost_write(css, NULL, tgt.boost);
 			prefer_idle_write(css, NULL, tgt.prefer_idle);
+			prefer_high_cap_write(css, NULL, tgt.prefer_high_cap);
 #ifdef CONFIG_SCHED_WALT
 			sched_colocate_write(css, NULL, tgt.colocate);
 			sched_boost_override_write(css, NULL, tgt.no_override);
