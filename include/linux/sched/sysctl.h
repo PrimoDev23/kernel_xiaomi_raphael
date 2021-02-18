@@ -87,8 +87,17 @@ int sched_proc_update_handler(struct ctl_table *table, int write,
 		void __user *buffer, size_t *length,
 		loff_t *ppos);
 
+#ifdef CONFIG_SCHED_WALT
 extern int sched_boost_handler(struct ctl_table *table, int write,
 			void __user *buffer, size_t *lenp, loff_t *ppos);
+#else
+static int sysctl_sched_boost = 0;
+static inline int sched_boost_handler(struct ctl_table *t, int w,
+			void __user *b, size_t *l, loff_t *p)
+{
+	return 0;
+}
+#endif
 
 /*
  *  control realtime throttling:
