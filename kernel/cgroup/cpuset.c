@@ -142,6 +142,9 @@ struct cpuset {
 struct cs_target {
 	const char *name;
 	char *cpus;
+	char *min;
+	u64 ls;
+	u64 boost;
 };
 #endif
 
@@ -1776,20 +1779,42 @@ static ssize_t cpuset_write_resmask_assist(struct kernfs_open_file *of,
 	return cpuset_write_resmask(of, tgt.cpus, nbytes, off);
 }
 
+#ifdef CONFIG_UCLAMP_TASK_GROUP
+int cpu_uclamp_min_show(struct seq_file *sf, void *v);
+int cpu_uclamp_max_show(struct seq_file *sf, void *v);
+
+ssize_t cpu_uclamp_min_write(struct kernfs_open_file *of,
+                               char *buf, size_t nbytes,
+                               loff_t off);
+ssize_t cpu_uclamp_max_write(struct kernfs_open_file *of,
+                               char *buf, size_t nbytes,
+                               loff_t off);
+
+int cpu_uclamp_ls_write_u64(struct cgroup_subsys_state *css,
+                              struct cftype *cftype, u64 ls);
+u64 cpu_uclamp_ls_read_u64(struct cgroup_subsys_state *css,
+                             struct cftype *cft);
+int cpu_uclamp_boost_write_u64(struct cgroup_subsys_state *css,
+                              struct cftype *cftype, u64 boost);
+u64 cpu_uclamp_boost_read_u64(struct cgroup_subsys_state *css,
+                             struct cftype *cft);
+#endif
+
 static ssize_t cpuset_write_resmask_wrapper(struct kernfs_open_file *of,
 					 char *buf, size_t nbytes, loff_t off)
 {
 #ifdef CONFIG_CPUSETS_ASSIST
 	static struct cs_target cs_targets[] = {
-		{ "audio-app",		CONFIG_CPUSET_AUDIO_APP },
-		{ "background",		CONFIG_CPUSET_BG },
-		{ "camera-daemon",	CONFIG_CPUSET_CAMERA },
-		{ "foreground",		CONFIG_CPUSET_FG },
-		{ "restricted",		CONFIG_CPUSET_RESTRICTED },
-		{ "system-background",	CONFIG_CPUSET_SYSTEM_BG },
-		{ "top-app",		CONFIG_CPUSET_TOP_APP },
+		{ "audio-app",		CONFIG_CPUSET_AUDIO_APP, "0", 0, 0 },
+		{ "background",		CONFIG_CPUSET_BG, "20", 0, 0 },
+		{ "camera-daemon",	CONFIG_CPUSET_CAMERA, "0", 0, 0 },
+		{ "foreground",		CONFIG_CPUSET_FG, "0", 0, 0 },
+		{ "restricted",		CONFIG_CPUSET_RESTRICTED, "0", 0, 0 },
+		{ "system-background",	CONFIG_CPUSET_SYSTEM_BG, "0", 0, 0 },
+		{ "top-app",		CONFIG_CPUSET_TOP_APP, "10", 1, 1 },
 	};
-	struct cpuset *cs = css_cs(of_css(of));
+	struct cgroup_subsys_state *css = of_css(of);
+	struct cpuset *cs = css_cs(css);
 	int i;
 
 	if (task_is_booster(current)) {
@@ -1797,8 +1822,13 @@ static ssize_t cpuset_write_resmask_wrapper(struct kernfs_open_file *of,
 			struct cs_target tgt = cs_targets[i];
 
 			if (!strcmp(cs->css.cgroup->kn->name, tgt.name))
+			{
+				//cpu_uclamp_min_write(of, tgt.min, nbytes, off);
+				cpu_uclamp_ls_write_u64(css, NULL, tgt.ls);
+				cpu_uclamp_boost_write_u64(css, NULL, tgt.boost);
 				return cpuset_write_resmask_assist(of, tgt,
 								   nbytes, off);
+			}
 		}
 	}
 #endif
@@ -1890,27 +1920,6 @@ static s64 cpuset_read_s64(struct cgroup_subsys_state *css, struct cftype *cft)
 	/* Unrechable but makes gcc happy */
 	return 0;
 }
-
-#ifdef CONFIG_UCLAMP_TASK_GROUP
-int cpu_uclamp_min_show(struct seq_file *sf, void *v);
-int cpu_uclamp_max_show(struct seq_file *sf, void *v);
-
-ssize_t cpu_uclamp_min_write(struct kernfs_open_file *of,
-                               char *buf, size_t nbytes,
-                               loff_t off);
-ssize_t cpu_uclamp_max_write(struct kernfs_open_file *of,
-                               char *buf, size_t nbytes,
-                               loff_t off);
-
-int cpu_uclamp_ls_write_u64(struct cgroup_subsys_state *css,
-                              struct cftype *cftype, u64 ls);
-u64 cpu_uclamp_ls_read_u64(struct cgroup_subsys_state *css,
-                             struct cftype *cft);
-int cpu_uclamp_boost_write_u64(struct cgroup_subsys_state *css,
-                              struct cftype *cftype, u64 boost);
-u64 cpu_uclamp_boost_read_u64(struct cgroup_subsys_state *css,
-                             struct cftype *cft);
-#endif
 
 /*
  * for the common functions, 'private' gives the type of file

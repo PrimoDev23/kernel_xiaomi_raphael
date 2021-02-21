@@ -7966,6 +7966,8 @@ static ssize_t cpu_uclamp_write(struct kernfs_open_file *of, char *buf,
 	rcu_read_unlock();
 	mutex_unlock(&uclamp_mutex);
 
+	pr_info("%s: %s %d %s", __func__, buf, (int)clamp_id, of_css(of)->cgroup->kn->name);
+
 	return nbytes;
 }
 
